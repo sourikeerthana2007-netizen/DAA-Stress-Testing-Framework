@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DAA Stress-Testing Lab: Interactive</title>
+<style>
+:root{--bg:#fff;--fg:#1a1d21;--mut:#5f6872;--card:#f5f6f8;--bd:#dde1e6;--low:#1b7f4b;--mod:#9a6700;--high:#c62828;--ac:#2c5282;--acf:#fff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171b;--fg:#e8eaed;--mut:#9aa3ad;--card:#1d2127;--bd:#2f353d;--low:#4cc38a;--mod:#e3b341;--high:#ff7b72;--ac:#7fb0ff;--acf:#14171b}}
+:root[data-theme="dark"]{--bg:#14171b;--fg:#e8eaed;--mut:#9aa3ad;--card:#1d2127;--bd:#2f353d;--low:#4cc38a;--mod:#e3b341;--high:#ff7b72;--ac:#7fb0ff;--acf:#14171b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+main{max-width:980px;margin:0 auto;padding:18px 14px 40px}
+h1{font-size:21px;margin:0 0 2px}.s{color:var(--mut);margin:0 0 14px;font-size:13px}
+#ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px}
+label{display:flex;flex-direction:column;font-size:12px;color:var(--mut);gap:3px}
+select,input{font:inherit;padding:6px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);color:var(--fg)}
+.btns{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap}
+button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--ac);background:var(--ac);color:var(--acf);cursor:pointer}
+button.o{background:transparent;color:var(--ac)}
+#out{margin-top:14px}.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px;margin-bottom:12px}
+.b{display:inline-block;font-weight:600;padding:1px 9px;border-radius:10px;border:1px solid currentColor}
+.Low{color:var(--low)}.Moderate{color:var(--mod)}.High{color:var(--high)}
+.big{display:flex;gap:22px;flex-wrap:wrap;margin:6px 0}.big div{font-size:12px;color:var(--mut)}.big b{display:block;font-size:20px;color:var(--fg)}
+.wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}td,th{border:1px solid var(--bd);padding:6px 8px;text-align:left}th{background:var(--bg)}
+svg{width:100%;height:auto;display:block}.m{color:var(--mut);font-size:12px}.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+</style></head><body><main>
+<h1>DAA Algorithm Stress-Testing Lab</h1>
+<p class="s">Scenario: a software assurance team wants to know not only whether an algorithm is correct, but when it becomes slow, memory-intensive or impractical. Pick an algorithm, then use <b>Scenario</b> to feed it a typical input and a carefully crafted one. Risk is classified Low / Moderate / High. Live in-browser ports of our Python algorithms.</p>
+<div id="ctl"></div><div id="out"></div>
+<p class="m">The full Python framework also tests Binomial/Fibonacci heaps and B-Trees; this page covers trees, MST, knapsack, DP and backtracking / Branch &amp; Bound.</p>
+</main>
+<script>
+const mul=s=>()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const $=id=>document.getElementById(id);
+const keys=(n,o,R)=>{const a=[...Array(n).keys()];if(o=="random")for(let i=n-1;i>0;i--){const j=R()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+// ---- trees
+const naive=(k,n,p,C)=>{let r=null;for(const x of k){const nd={k:x,l:null,r:null};if(!r){r=nd;continue}let c=r,d=1;for(;;){C.add(1);d++;if(d>(C.depth||0))C.depth=d;const s=x<c.k?"l":"r";if(!c[s]){c[s]=nd;break}c=c[s]}}};
+const llrb=(k,n,p,C)=>{const red=h=>h&&h.c;
+const rl=h=>{C.add(1);const x=h.r;h.r=x.l;x.l=h;x.c=h.c;h.c=1;return x},rr=h=>{C.add(1);const x=h.l;h.l=x.r;x.r=h;x.c=h.c;h.c=1;return x};
+const ins=(h,v)=>{if(!h)return{k:v,c:1,l:null,r:null};C.add(1);if(v<h.k)h.l=ins(h.l,v);else h.r=ins(h.r,v);
+if(red(h.r)&&!red(h.l))h=rl(h);if(red(h.l)&&red(h.l.l))h=rr(h);if(red(h.l)&&red(h.r)){h.c=1;h.l.c=0;h.r.c=0}return h};
+let r=null;for(const x of k){r=ins(r,x);r.c=0}const ht=h=>h?1+Math.max(ht(h.l),ht(h.r)):0;C.depth=ht(r)};
+// ---- MST
+const graph=(V,dense,R)=>{const E=dense?V*(V-1)/4|0:2*V,seen=new Set(),ed=[];const add=(u,v)=>{if(u==v)return;if(u>v)[u,v]=[v,u];const q=u*V+v;if(seen.has(q))return;seen.add(q);ed.push([u,v,1+R()*1e6|0])};
+for(let i=1;i<V;i++)add(i,R()*i|0);while(ed.length<Math.max(E,V-1))add(R()*V|0,R()*V|0);return ed};
+const kruskal=(e,V,p,C)=>{e=[...e].sort((a,b)=>{C.add(1);return a[2]-b[2]});const P=[...Array(V).keys()],f=x=>{while(P[x]!=x){C.add(1);P[x]=P[P[x]];x=P[x]}return x};let w=0;for(const[u,v,c]of e){const a=f(u),b=f(v);if(a!=b){P[a]=b;w+=c}}return"MST weight "+w};
+const primHeap=(e,V,p,C)=>{const adj=Array.from({length:V},()=>[]);for(const[u,v,w]of e){adj[u].push([w,v]);adj[v].push([w,u])}C.add(e.length*2);const h=[];
+const push=x=>{let i=h.length;h.push(x);while(i>0){const q=(i-1)>>1;C.add(1);if(h[q][0]<=x[0])break;h[i]=h[q];i=q}h[i]=x};
+const pop=()=>{const t=h[0],x=h.pop();if(h.length){let i=0;for(;;){let c=2*i+1;if(c>=h.length)break;if(c+1<h.length){C.add(1);if(h[c+1][0]<h[c][0])c++}C.add(1);if(h[c][0]>=x[0])break;h[i]=h[c];i=c}h[i]=x}return t};
+const seen=new Uint8Array(V);push([0,0]);let w=0;while(h.length){const[c,u]=pop();if(seen[u])continue;seen[u]=1;w+=c;for(const x of adj[u])if(!seen[x[1]])push(x)}return"MST weight "+w};
+const primMat=(e,V,p,C)=>{C.mem=V*V*8;const M=new Float64Array(V*V).fill(Infinity);C.add(V*V);for(const[u,v,w]of e)M[u*V+v]=M[v*V+u]=w;const K=new Float64Array(V).fill(Infinity),T=new Uint8Array(V);K[0]=0;let w=0;
+for(let i=0;i<V;i++){let b=Infinity,u=-1;for(let v=0;v<V;v++)if(!T[v]&&K[v]<b){b=K[v];u=v}C.add(2*V);if(u<0)break;T[u]=1;w+=b;for(let v=0;v<V;v++)if(!T[v]&&M[u*V+v]<K[v])K[v]=M[u*V+v]}return"MST weight "+w};
+// ---- knapsack (size = capacity W, n = 100 items)
+const items=(W,p,R)=>Array.from({length:100},()=>[1+R()*999|0,1+R()*99|0]);
+const byR=(it,C)=>[...it].sort((a,b)=>{C.add(1);return b[0]*a[1]-a[0]*b[1]});
+const frac=(it,W,p,C)=>{let room=W,val=0;for(const[v,w]of byR(it,C)){if(w<=room){val+=v;room-=w}else{val+=v*room/w;break}}return"value "+val.toFixed(1)+" (fractional optimum)"};
+const g01=(it,W,p,C)=>{let room=W,val=0;for(const[v,w]of byR(it,C))if(w<=room){val+=v;room-=w}return"value "+val+" (greedy on 0/1: may be sub-optimal)"};
+const kdp=(it,W,p,C)=>{C.mem=(it.length+1)*(W+1)*4;if((it.length+1)*(W+1)>5e6)throw"BUDGET";const d=new Int32Array(W+1);for(const[v,w]of it){C.add(W+1);for(let c=W;c>=w;c--){const t=d[c-w]+v;if(t>d[c])d[c]=t}}return"value "+d[W]+" (0/1 optimum)"};
+// ---- DP
+const dpin=(n,p,R)=>({M:Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>i==j?0:1+R()*99|0)),d:Array.from({length:n+1},()=>5+R()*95|0)});
+const fw=(I,n,p,C)=>{C.mem=n*n*8;const d=I.M.map(r=>[...r]);for(let k=0;k<n;k++)for(let i=0;i<n;i++){C.add(n);const a=d[i][k],dk=d[k],di=d[i];for(let j=0;j<n;j++){const t=a+dk[j];if(t<di[j])di[j]=t}}return"all-pairs distances computed"};
+const mcm=(I,n,p,C)=>{C.mem=n*n*8;const d=I.d,m=Array.from({length:n},()=>new Array(n).fill(0));for(let L=2;L<=n;L++)for(let i=0;i+L<=n;i++){const j=i+L-1;let b=Infinity;C.add(L-1);for(let k=i;k<j;k++){const c=m[i][k]+m[k+1][j]+d[i]*d[k+1]*d[j+1];if(c<b)b=c}m[i][j]=b}return"min multiplications "+m[0][n-1]};
+// ---- search
+const nq=all=>(_,n,p,C)=>{C.depth=n;const col=new Uint8Array(n),a=new Uint8Array(2*n),b=new Uint8Array(2*n);let s=0;const go=r=>{C.add(1);if(r==n){s++;return!all}for(let c=0;c<n;c++){if(col[c]||a[r+c]||b[r-c+n])continue;col[c]=a[r+c]=b[r-c+n]=1;if(go(r+1))return true;col[c]=a[r+c]=b[r-c+n]=0}return false};go(0);return s+" solution(s) found"};
+const ham=pr=>(_,n,p,C)=>{C.depth=n;const A=Array.from({length:n},(_,u)=>[...Array(n).keys()].filter(v=>v!=u&&(p.kind=="ok"||u<n-1&&v<n-1||u==0&&v==n-1||u==n-1&&v==0)));
+if(pr&&A.some(a=>a.length<2)){C.add(1);return"no cycle: a vertex has degree < 2 (1 check)"}const vis=new Uint8Array(n);vis[0]=1;
+const go=(u,d)=>{C.add(1);if(d==n)return A[u].includes(0);for(const v of A[u])if(!vis[v]){vis[v]=1;if(go(v,d+1))return true;vis[v]=0}return false};return go(0,1)?"cycle found":"no Hamiltonian cycle exists"};
+const tspin=(n,p,R)=>{const P=Array.from({length:n},()=>[R()*1000,R()*1000]);return P.map(a=>P.map(b=>Math.round(Math.hypot(a[0]-b[0],a[1]-b[1]))))};
+const tsp=bb=>(d,n,p,C)=>{C.depth=n;const mi=d.map((_,v)=>Math.min(...d.map((r,u)=>u==v?Infinity:r[v])));let best=Infinity;
+if(bb){let c=0,u=0;const s=new Set([0]);while(s.size<n){let q=-1;for(let v=0;v<n;v++)if(!s.has(v)&&(q<0||d[u][v]<d[u][q]))q=v;c+=d[u][q];s.add(q);u=q}best=c+d[u][0]}
+const vis=new Uint8Array(n);vis[0]=1;let rem=0;for(let v=1;v<n;v++)rem+=mi[v];
+const go=(u,k,cost,rm)=>{C.add(1);if(k==n){best=Math.min(best,cost+d[u][0]);return}for(let v=0;v<n;v++)if(!vis[v]){const nc=cost+d[u][v];if(bb&&nc+rm-mi[v]+mi[0]>=best)continue;vis[v]=1;go(v,k+1,nc,rm-mi[v]);vis[v]=0}};
+go(0,1,0,rem);return"shortest tour length "+best};
+// ---- registry: algos = {name:[fn, theory]}
+const G={
+trees:{name:"1 · Trees (Red-Black vs naive BST)",sl:"Number of keys n",lo:100,hi:16000,def:4000,sw:[500,1000,2000,4000,8000],lim:2e8,par:{key:"order",label:"Insert order",opts:["random","sorted"]},gen:(n,p,R)=>keys(n,p.order,R),
+algos:{"Naive BST":[naive,"O(n log n) random, O(n²) sorted"],"Red-Black tree (left-leaning)":[llrb,"O(n log n) always"]}},
+mst:{name:"2 · MST (Kruskal vs Prim)",sl:"Vertices V",lo:50,hi:1600,def:400,sw:[100,200,400,800],lim:2e8,par:{key:"dens",label:"Graph density",opts:["sparse","dense"]},gen:(V,p,R)=>graph(V,p.dens=="dense",R),
+algos:{"Kruskal":[kruskal,"O(E log E)"],"Prim (binary heap)":[primHeap,"O(E log V)"],"Prim (adjacency matrix)":[primMat,"O(V²)"]}},
+knap:{name:"3 · Knapsack (greedy vs DP)",sl:"Capacity W (100 items)",lo:100,hi:200000,def:2000,sw:[500,2000,8000,32000,128000],lim:2e8,gen:items,
+algos:{"Fractional (greedy)":[frac,"O(n log n)"],"Greedy applied to 0/1":[g01,"O(n log n), not optimal"],"0/1 DP table":[kdp,"O(nW) pseudo-polynomial"]}},
+dp:{name:"4 · Dynamic programming",sl:"Size n",lo:10,hi:300,def:100,sw:[25,50,100,150,200],lim:2e8,gen:dpin,
+algos:{"Floyd-Warshall (V = n)":[fw,"Θ(V³)"],"Matrix chain (n matrices)":[mcm,"Θ(n³)"]}},
+nq:{name:"5a · N-Queens (backtracking)",sl:"Board size n",lo:4,hi:13,def:8,sw:[6,7,8,9,10,11,12],lim:3e6,exp:1,
+algos:{"All solutions":[nq(1),"O(n!) pruned"],"First solution":[nq(0),"O(n!) worst case"]}},
+ham:{name:"5b · Hamiltonian cycle (hard graph K(n-1) + pendant)",sl:"Vertices n",lo:5,hi:13,def:9,sw:[6,7,8,9,10,11,12],lim:2e6,exp:1,
+algos:{"Plain backtracking":[ham(0),"O(n!)"],"With degree ≥ 2 pruning":[ham(1),"O(n) check"]}},
+tsp:{name:"5c · TSP (brute force vs Branch & Bound)",sl:"Cities n",lo:5,hi:13,def:9,sw:[5,6,7,8,9,10,11],lim:3e6,exp:1,gen:tspin,
+algos:{"Brute-force backtracking":[tsp(0),"O((n-1)!)"],"Branch & Bound (DFS, min-edge bound)":[tsp(1),"exponential worst case"]}}};
+const SCN={trees:{np:{order:"random"},ap:{order:"sorted"},nl:"Typical input: keys arrive in random order",al:"Crafted input: keys arrive already sorted"},
+mst:{np:{dens:"sparse"},ap:{dens:"dense"},nl:"Typical input: sparse network (E = 2V)",al:"Crafted input: dense network (E ≈ V²/4)"},
+knap:{nsz:n=>n/50|0,np:{},ap:{},nl:"Typical input: small capacity (size ÷ 50)",al:"Crafted input: very large capacity"},
+dp:{nsz:n=>n/2|0,np:{},ap:{},nl:"Typical input: half the size",al:"Crafted input: full size (doubling costs 8×)"},
+nq:{nsz:n=>n-3,np:{},ap:{},nl:"Typical input: board 3 smaller",al:"Crafted input: the requested board"},
+ham:{np:{kind:"ok"},ap:{kind:"hard"},nl:"Typical input: graph that has a Hamiltonian cycle",al:"Crafted input: graph with a dead-end vertex (no cycle)"},
+tsp:{nsz:n=>n-3,np:{},ap:{},nl:"Typical input: 3 fewer cities",al:"Crafted input: the requested number of cities"}};
+let gk="trees";
+function runOne(g,a,n,p){const C={ops:0,lim:g.lim,add(k){this.ops+=k;if(this.ops>this.lim)throw"BUDGET"}};const R=mul(7+n),inp=g.gen?g.gen(n,p,R):null;const t0=performance.now();let bud=false,info="";
+try{info=g.algos[a][0](inp,n,p,C)||""}catch(e){if(e!=="BUDGET")throw e;bud=true;info="stopped: budget exceeded"}return{n,ops:C.ops,t:(performance.now()-t0)/1000,bud,info,depth:C.depth,mem:C.mem}}
+function slope(pts){const q=pts.filter(x=>x.ops>0&&x.n>1).map(x=>[Math.log(x.n),Math.log(x.ops)]);if(q.length<2)return null;const mx=q.reduce((s,x)=>s+x[0],0)/q.length,my=q.reduce((s,x)=>s+x[1],0)/q.length,d=q.reduce((s,x)=>s+(x[0]-mx)**2,0);return d?q.reduce((s,x)=>s+(x[0]-mx)*(x[1]-my),0)/d:null}
+function risk(g,pts){let r=0;const why=[];const up=(l,w)=>{r=Math.max(r,l);why.push(w)};const bud=pts.find(x=>x.bud);if(bud)up(2,`budget exceeded at size ${bud.n}`);
+const tm=Math.max(...pts.map(x=>x.t));if(tm>5)up(2,`${tm.toFixed(1)} s`);else if(tm>.5)up(1,`${tm.toFixed(2)} s at the largest size`);
+const ok=pts.filter(x=>!x.bud);if(ok.length>2){const s=slope(ok);if(g.exp){const gr=ok[ok.length-1].ops/Math.max(ok[0].ops,1);if(gr>=1000)up(1,`ops grew ×${Math.round(gr).toLocaleString()} over the sweep`)}else if(s!==null&&s>=1.8)up(1,`fitted growth n^${s.toFixed(2)}: doubling n multiplies ops by ${(2**s).toFixed(1)}`)}
+if(!why.length)why.push("practical for the tested sizes");return{lv:["Low","Moderate","High"][r],why:why.join("; ")}}
+function chart(pts){const ok=pts.filter(x=>x.ops>0),W=420,H=150,p=30;if(ok.length<2)return"";const lx=Math.log(ok[0].n),hx=Math.log(ok[ok.length-1].n),ys=ok.map(x=>Math.log(x.ops));let lo=Math.min(...ys),hi=Math.max(...ys);if(hi-lo<1e-9){lo--;hi++}
+const X=v=>p+(Math.log(v)-lx)/((hx-lx)||1)*(W-2*p),Y=v=>H-p-(v-lo)/(hi-lo)*(H-2*p),q=ok.map((x,i)=>[X(x.n),Y(ys[i])]);
+return`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="operations versus size, log-log"><line x1="${p}" y1="${H-p}" x2="${W-p}" y2="${H-p}" stroke="var(--bd)"/><line x1="${p}" y1="12" x2="${p}" y2="${H-p}" stroke="var(--bd)"/>
+<polyline fill="none" stroke="var(--ac)" stroke-width="2" points="${q.map(z=>z.join(",")).join(" ")}"/>${q.map(z=>`<circle cx="${z[0]}" cy="${z[1]}" r="3" fill="var(--ac)"/>`).join("")}
+<text x="${p}" y="${H-10}" font-size="10" fill="var(--mut)">n=${ok[0].n.toLocaleString()}</text><text x="${W-p}" y="${H-10}" font-size="10" text-anchor="end" fill="var(--mut)">n=${ok[ok.length-1].n.toLocaleString()}</text><text x="${p+4}" y="12" font-size="10" fill="var(--mut)">ops (log scale) up to ${ok[ok.length-1].ops.toLocaleString()}</text></svg>`}
+const badge=l=>`<span class="b ${l}">${l} risk</span>`;
+function build(){const g=G[gk];$("ctl").innerHTML=`<label>Algorithm family<select id="gs">${Object.entries(G).map(([k,v])=>`<option value="${k}"${k==gk?" selected":""}>${v.name}</option>`).join("")}</select></label>
+<label>Algorithm<select id="as">${Object.keys(g.algos).map(a=>`<option>${a}</option>`).join("")}</select></label>
+${g.par?`<label>${g.par.label}<select id="ps">${g.par.opts.map(o=>`<option>${o}</option>`).join("")}</select></label>`:""}
+<label>${g.sl}<input id="sz" type="number" min="${g.lo}" max="${g.hi}" value="${g.def}"></label>
+<label>Service time limit (ms)<input id="sla" type="number" min="1" value="50"></label>
+<div class="btns"><button id="b4">Scenario: typical vs crafted input</button><button id="b1" class="o">Run once</button><button id="b2" class="o">Sweep sizes (growth + risk)</button><button id="b3" class="o">Compare all algorithms</button></div>`;
+$("gs").onchange=e=>{gk=e.target.value;build();$("out").innerHTML=""};$("b1").onclick=()=>go(1);$("b2").onclick=()=>go(2);$("b3").onclick=()=>go(3);$("b4").onclick=()=>go(4)}
+function go(m){const g=G[gk],a=$("as").value,p=g.par?{[g.par.key]:$("ps").value}:{};let n=Math.min(g.hi,Math.max(g.lo,+$("sz").value||g.def));if(gk=="mst"&&p.dens=="dense")n=Math.min(n,800);$("sz").value=n;
+$("out").innerHTML='<div class="card">Running…</div>';setTimeout(()=>{const th=a2=>g.algos[a2][1],pl=g.par?` · ${p[g.par.key]}`:"";
+if(m==1){const r=runOne(g,a,n,p),k=risk(g,[r]);$("out").innerHTML=`<div class="card"><b>${a}</b> · n=${n.toLocaleString()}${pl}<div class="m">Theory: ${th(a)}</div><div class="big"><div><b>${r.ops.toLocaleString()}</b>operations</div><div><b>${r.t.toFixed(4)} s</b>time</div><div><b>${badge(k.lv)}</b></div></div><div class="m">${k.why}</div><p>${r.info}</p></div>`}
+if(m==2){const pts=[];for(const s of g.sw){let sz=s;if(gk=="mst"&&p.dens=="dense")sz=Math.min(sz,800);const r=runOne(g,a,sz,p);pts.push(r);if(r.bud)break}const k=risk(g,pts);
+$("out").innerHTML=`<div class="card"><b>${a}</b> sweep${pl}<div class="m">Theory: ${th(a)}</div><p>${badge(k.lv)} <span class="m">${k.why}</span></p>${chart(pts)}<div class="wrap"><table><tr><th>n</th><th>operations</th><th>time (s)</th><th>note</th></tr>${pts.map(r=>`<tr><td>${r.n.toLocaleString()}</td><td>${r.bud?"—":r.ops.toLocaleString()}</td><td>${r.t.toFixed(4)}</td><td>${r.bud?"budget exceeded":""}</td></tr>`).join("")}</table></div></div>`}
+if(m==3){const rows=Object.keys(g.algos).map(x=>({x,r:runOne(g,x,n,p)}));rows.forEach(o=>o.k=risk(g,[o.r]));const okr=rows.filter(o=>!o.r.bud),best=okr.length?okr.reduce((s,o)=>o.r.ops<s.r.ops?o:s):null;
+$("out").innerHTML=`<div class="card"><b>Same input for every algorithm</b> · n=${n.toLocaleString()}${pl}<div class="wrap"><table><tr><th>Algorithm</th><th>Theory</th><th>Ops</th><th>Time (s)</th><th>Risk</th><th>Result</th></tr>${rows.map(o=>`<tr><td>${o.x}${o===best?" ✓ fewest ops":""}</td><td>${th(o.x)}</td><td>${o.r.bud?"—":o.r.ops.toLocaleString()}</td><td>${o.r.t.toFixed(4)}</td><td>${badge(o.k.lv)}</td><td>${o.r.info}</td></tr>`).join("")}</table></div><p class="m">Change the input property (density, insert order, size) and compare again: the best choice can change.</p></div>`}
+if(m==4){const S=SCN[gk],sla=Math.max(1,+$("sla").value||50)/1e3;let nn=Math.max(g.lo,S.nsz?S.nsz(n):n),na=n;if(gk=="mst"){nn=Math.min(nn,800);na=Math.min(na,800)}
+const col=(lab,sz,pp)=>{const r=runOne(g,a,sz,pp),k=risk(g,[r]),ok=!r.bud&&r.t<=sla;return`<div class="card"><b>${lab}</b><div class="m">size ${sz.toLocaleString()}</div><div class="big"><div><b>${r.bud?"—":r.ops.toLocaleString()}</b>operations</div><div><b>${(r.t*1000).toFixed(1)} ms</b>time</div></div><p>${r.bud?"Stopped at the resource budget (impractical)":"Correct answer: "+r.info}</p><div class="m">${r.depth?`search / tree depth: ${r.depth.toLocaleString()}<br>`:""}${r.mem?`memory needed: ≈ ${(r.mem/1048576).toFixed(r.mem<1e7?2:0)} MB`:""}</div><p>${badge(k.lv)}</p><p class="${ok?"Low":"High"}"><b>${ok?"Within":"BREACHES"} the ${Math.round(sla*1000)} ms service limit${ok?"":": availability risk"}</b></p></div>`};
+$("out").innerHTML=`<p class="m">Same algorithm (<b>${a}</b>) on two inputs a real system could receive. The answers are correct either way; only the cost differs. Raise the size or lower the time limit to see the breach.</p><div class="two">${col(S.nl,nn,{...p,...S.np})}${col(S.al,na,{...p,...S.ap})}</div>`}},30)}
+build();
+</script></body></html>
